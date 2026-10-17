@@ -16,12 +16,29 @@ module tt_um_example (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
+  // 64-bit register file: 8 bytes x 8 bits, used to check how many tiles
+  // a plain flop-based register bank needs.
+  //   uio_in[2:0] = byte address
+  //   uio_in[3]   = write enable (writes ui_in to the addressed byte)
+  //   uo_out      = addressed byte (combinational read)
+  reg [7:0] mem[0:7];
+  wire [2:0] addr = uio_in[2:0];
+  wire       we   = uio_in[3];
+
+  integer i;
+  always @(posedge clk) begin
+    if (!rst_n) begin
+      for (i = 0; i < 8; i = i + 1) mem[i] <= 8'h00;
+    end else if (we) begin
+      mem[addr] <= ui_in;
+    end
+  end
+
+  assign uo_out  = mem[addr];
   assign uio_out = 0;
   assign uio_oe  = 0;
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+  wire _unused = &{ena, uio_in[7:4], 1'b0};
 
 endmodule
